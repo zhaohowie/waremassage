@@ -243,4 +243,24 @@ class AppointmentController extends Controller
             'appointments'
         ));
     }
+
+    public function move(Request $request, Appointment $appointment)
+    {
+        $request->validate([
+            'staff_id' => 'required|exists:staff,id',
+            'appointment_date' => 'required|date',
+            'appointment_time' => 'required',
+        ]);
+
+        $appointment->update([
+            'staff_id' => $request->staff_id,
+            'appointment_date' => $request->appointment_date,
+            'appointment_time' => $request->appointment_time,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Appointment moved successfully.',
+        ]);
+    }
 }

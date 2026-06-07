@@ -34,7 +34,9 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])
         ->name('appointments.update-status');
     Route::get('/calendar', [AppointmentController::class, 'calendar'])
-        ->name('appointments.calendar');        
+        ->name('appointments.calendar');   
+    Route::patch('/appointments/{appointment}/move', [AppointmentController::class, 'move'])
+    ->name('appointments.move');         
 });
 
 Route::middleware('auth')->group(function () {
