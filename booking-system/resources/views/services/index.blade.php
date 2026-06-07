@@ -37,6 +37,7 @@
                 <thead>
                     <tr style="border-bottom:1px solid #ddd;">
                         <th style="text-align:left; padding:12px;">Name</th>
+                        <th style="text-align:left; padding:12px;">Category</th>
                         <th style="text-align:left; padding:12px;">Price</th>
                         <th style="text-align:left; padding:12px;">Duration</th>
                         <th style="text-align:left; padding:12px;">Status</th>
@@ -48,6 +49,9 @@
                         <tr style="border-bottom:1px solid #eee;">
                             <td style="padding:12px;">
                                 {{ $service->name }}
+                            </td>
+                            <td style="padding:12px;">
+                                {{ $service->category->name ?? 'No Category' }}
                             </td>
                             <td style="padding:12px;">
                                 ${{ number_format($service->price, 2) }}
@@ -83,7 +87,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5"
+                            <td colspan="6"
                                 style="padding:20px;
                                        text-align:center;
                                        color:#666;">

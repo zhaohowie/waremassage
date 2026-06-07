@@ -1,3 +1,23 @@
+<div style="margin-bottom:16px;">
+    <label style="display:block; margin-bottom:6px;">Category</label>
+
+    <select name="service_category_id"
+            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px;">
+        <option value="">No Category</option>
+
+        @foreach($categories as $category)
+            <option value="{{ $category->id }}"
+                {{ old('service_category_id', $service->service_category_id ?? '') == $category->id ? 'selected' : '' }}>
+                {{ $category->name }}
+            </option>
+        @endforeach
+    </select>
+
+    @error('service_category_id')
+        <div style="color:#dc2626; margin-top:4px;">{{ $message }}</div>
+    @enderror
+</div>
+
 <div class="mb-4">
     <label class="block mb-1">Service Name</label>
     <input type="text" name="name" class="w-full border-gray-300 rounded" value="{{ old('name', $service->name ?? '') }}">
@@ -19,6 +39,15 @@
     <label class="block mb-1">Duration in minutes</label>
     <input type="number" name="duration" class="w-full border-gray-300 rounded" value="{{ old('duration', $service->duration ?? '') }}">
     @error('duration') <div class="text-red-600">{{ $message }}</div> @enderror
+</div>
+
+<div style="margin-bottom:16px;">
+    <label style="display:block; margin-bottom:6px;">Cleanup Time in minutes</label>
+    <input type="number"
+           name="cleanup_time"
+           min="0"
+           value="{{ old('cleanup_time', $service->cleanup_time ?? 0) }}"
+           style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px;">
 </div>
 
 <div class="mb-4">
