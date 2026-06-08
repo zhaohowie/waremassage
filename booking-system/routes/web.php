@@ -36,7 +36,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/calendar', [AppointmentController::class, 'calendar'])
         ->name('appointments.calendar');   
     Route::patch('/appointments/{appointment}/move', [AppointmentController::class, 'move'])
-    ->name('appointments.move');         
+    ->name('appointments.move');
+    Route::get('/calendar/data', [AppointmentController::class, 'calendarData'])
+    ->name('appointments.calendar-data');
+
+    Route::get('/staff/{staff}/block-time', [StaffWorkingHourController::class, 'blockTimeForm'])
+        ->name('staff.block-time.form');
+
+    Route::post('/staff/{staff}/block-time', [StaffWorkingHourController::class, 'storeBlockTime'])
+        ->name('staff.block-time.store'); 
+            
+    Route::patch('/blocked-times/{workingHour}/move', [StaffWorkingHourController::class, 'moveBlockedTime'])
+        ->name('blocked-times.move');
+
+    Route::delete('/blocked-times/{workingHour}', [StaffWorkingHourController::class, 'deleteBlockedTime'])
+        ->name('blocked-times.delete');            
 });
 
 Route::middleware('auth')->group(function () {

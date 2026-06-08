@@ -31,16 +31,16 @@
             <select name="staff_id" required style="width:100%; padding:8px; margin-bottom:16px;">
                 <option value="">Select staff</option>
                 @foreach($staff as $member)
-                    <option value="{{ $member->id }}">
+                    <option value="{{ $member->id }}" {{ ($selectedStaffId ?? '') == $member->id ? 'selected' : '' }}>
                         {{ $member->name }}
                     </option>
                 @endforeach
             </select>
 
             <h3>Date & Time</h3>
-            <input type="date" name="appointment_date" required style="width:100%; padding:8px; margin-bottom:16px;">
-
-            <input type="hidden" name="appointment_time" id="appointment_time" required>
+            <input type="date" name="appointment_date" value="{{ $selectedDate ?? '' }}" required style="width:100%; padding:8px; margin-bottom:16px;">
+            
+            <input type="hidden" name="appointment_time" id="appointment_time" value="{{ $selectedTime ?? '' }}" required>
 
             <div id="available-times" style="margin-bottom:16px;">
                 Please select service, staff, and date first.

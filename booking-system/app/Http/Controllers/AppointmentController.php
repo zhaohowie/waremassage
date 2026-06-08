@@ -36,7 +36,17 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('booking.form', compact('services', 'staff'));
+        $selectedDate = request('date');
+        $selectedTime = request('time');
+        $selectedStaffId = request('staff_id');
+
+        return view('booking.form', compact(
+            'services',
+            'staff',
+            'selectedDate',
+            'selectedTime',
+            'selectedStaffId'
+        ));
     }
 
     public function storeBooking(Request $request)
@@ -220,28 +230,50 @@ class AppointmentController extends Controller
 
         $dayOfWeek = \Carbon\Carbon::parse($date)->dayOfWeek;
 
+        $availableStaffIds = \App\Models\StaffWorkingHour::whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_available', true)
+            ->pluck('staff_id')
+            ->unique()
+            ->values();
+
+            \Log::info('dayOfWeek', [
+                'ids' => $availableStaffIds->toArray(),
+            ]);
+
         $staffMembers = Staff::where('is_active', true)
-            ->whereHas('workingHours', function ($query) use ($date, $dayOfWeek) {
-                $query->where('schedule_type', 'date_range_weekly')
-                    ->whereDate('start_date', '<=', $date)
-                    ->whereDate('end_date', '>=', $date)
-                    ->where('day_of_week', $dayOfWeek)
-                    ->where('is_available', true);
-            })
+            ->whereIn('id', $availableStaffIds)
             ->orderBy('name')
             ->get();
 
         $appointments = Appointment::with(['customer', 'service', 'staff'])
             ->where('appointment_date', $date)
-            ->whereIn('status', ['pending', 'confirmed'])
             ->whereIn('staff_id', $staffMembers->pluck('id'))
             ->get();
 
-        return view('appointments.calendar', compact(
-            'date',
-            'staffMembers',
-            'appointments'
-        ));
+        $resources = $staffMembers->map(fn ($staff) => [
+            'id' => (string) $staff->id,
+            'title' => $staff->name,
+        ]);
+
+        $events = $appointments->map(function ($appointment) {
+            $start = $appointment->appointment_date . 'T' . $appointment->appointment_time;
+
+            $end = \Carbon\Carbon::parse($start)
+                ->addMinutes($appointment->duration)
+                ->format('Y-m-d\TH:i:s');
+
+            return [
+                'id' => (string) $appointment->id,
+                'resourceId' => (string) $appointment->staff_id,
+                'title' => $appointment->customer->full_name . ' - ' . $appointment->service->name,
+                'start' => $start,
+                'end' => $end,
+            ];
+        });
+
+        return view('appointments.calendar', compact('date', 'resources', 'events'));
     }
 
     public function move(Request $request, Appointment $appointment)
@@ -261,6 +293,141 @@ class AppointmentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Appointment moved successfully.',
+        ]);
+    }
+
+    public function calendarData(Request $request)
+    {
+        $date = $request->get('date', now()->toDateString());
+
+        $dayOfWeek = \Carbon\Carbon::parse($date)->dayOfWeek;
+
+        $availableStaffIds = \App\Models\StaffWorkingHour::whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_available', true)
+            ->pluck('staff_id')
+            ->unique()
+            ->values();
+
+        $staffMembers = Staff::where('is_active', true)
+            ->whereIn('id', $availableStaffIds)
+            ->orderBy('name')
+            ->get();
+
+        $appointments = Appointment::with(['customer', 'service', 'staff'])
+            ->where('appointment_date', $date)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('staff_id', $staffMembers->pluck('id'))
+            ->get();
+
+        $resources = $staffMembers->map(fn ($staff) => [
+            'id' => (string) $staff->id,
+            'title' => $staff->name,
+        ])->values();
+
+        $events = $appointments->map(function ($appointment) {
+            $start = $appointment->appointment_date . 'T' . substr($appointment->appointment_time, 0, 5);
+
+            $end = \Carbon\Carbon::parse($start)
+                ->addMinutes($appointment->duration)
+                ->format('Y-m-d\TH:i:s');
+
+            return [
+                'id' => (string) $appointment->id,
+                'resourceId' => (string) $appointment->staff_id,
+                'title' => ($appointment->customer->full_name ?? 'Customer') . ' - ' . ($appointment->service->name ?? 'Service'),
+                'start' => $start,
+                'end' => $end,
+            ];
+        })->values();
+
+        $businessStart = \Carbon\Carbon::parse($date . ' 08:00');
+        $businessEnd = \Carbon\Carbon::parse($date . ' 22:00');
+
+        $availabilityRows = \App\Models\StaffWorkingHour::whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_available', true)
+            ->get()
+            ->groupBy('staff_id');
+
+        $blockedRows = \App\Models\StaffWorkingHour::where('schedule_type', 'blocked')
+            ->whereDate('specific_date', $date)
+            ->where('is_available', false)
+            ->get();
+
+        $backgroundEvents = collect();
+
+        foreach ($staffMembers as $staff) {
+            $availableSlots = $availabilityRows->get($staff->id, collect())
+                ->sortBy('start_time')
+                ->values();
+
+            $cursor = $businessStart->copy();
+
+            foreach ($availableSlots as $slot) {
+                $slotStart = \Carbon\Carbon::parse($date . ' ' . $slot->start_time);
+                $slotEnd = \Carbon\Carbon::parse($date . ' ' . $slot->end_time);
+
+                if ($cursor->lt($slotStart)) {
+                    $backgroundEvents->push([
+                        'resourceId' => (string) $staff->id,
+                        'start' => $cursor->format('Y-m-d\TH:i:s'),
+                        'end' => $slotStart->format('Y-m-d\TH:i:s'),
+                        'display' => 'background',
+                        'backgroundColor' => '#e5e7eb',
+                    ]);
+                }
+
+                if ($cursor->lt($slotEnd)) {
+                    $cursor = $slotEnd->copy();
+                }
+            }
+
+            if ($cursor->lt($businessEnd)) {
+                $backgroundEvents->push([
+                    'resourceId' => (string) $staff->id,
+                    'start' => $cursor->format('Y-m-d\TH:i:s'),
+                    'end' => $businessEnd->format('Y-m-d\TH:i:s'),
+                    'display' => 'background',
+                    'backgroundColor' => '#e5e7eb',
+                ]);
+            }
+        }
+
+        foreach ($blockedRows as $blocked) {
+            $backgroundEvents->push([
+                'id' => 'blocked-' . $blocked->id,
+                'resourceId' => (string) $blocked->staff_id,
+                'title' => 'Blocked Time',
+                'start' => $date . 'T' . substr($blocked->start_time, 0, 5) . ':00',
+                'end' => $date . 'T' . substr($blocked->end_time, 0, 5) . ':00',
+
+                'backgroundColor' => '#4b5563',
+                'borderColor' => '#374151',
+                'textColor' => '#ffffff',
+
+                'editable' => true,
+                'durationEditable' => true,
+                'resourceEditable' => true,
+
+                'extendedProps' => [
+                    'type' => 'blocked_time',
+                    'working_hour_id' => $blocked->id,
+                    'staff_id' => $blocked->staff_id,
+                    'specific_date' => $blocked->specific_date,
+                    'start_time' => substr($blocked->start_time, 0, 5),
+                    'end_time' => substr($blocked->end_time, 0, 5),
+                ],
+            ]);
+        }
+
+        $events = $events->concat($backgroundEvents)->values();    
+            
+        return response()->json([
+            'resources' => $resources,
+            'events' => $events,
         ]);
     }
 }

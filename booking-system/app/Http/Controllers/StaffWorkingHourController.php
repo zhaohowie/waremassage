@@ -62,4 +62,66 @@ class StaffWorkingHourController extends Controller
             ->route('staff.index')
             ->with('success', 'Availability updated successfully.');
     }
+
+    public function blockTimeForm(\App\Models\Staff $staff, Request $request)
+    {
+        $date = $request->get('date');
+        $startTime = $request->get('start_time');
+
+        return view('staff-working-hours.block-time', compact(
+            'staff',
+            'date',
+            'startTime'
+        ));
+    }
+
+    public function storeBlockTime(Request $request, \App\Models\Staff $staff)
+    {
+        $request->validate([
+            'specific_date' => 'required|date',
+            'start_time' => 'required',
+            'end_time' => 'required|after:start_time',
+            'notes' => 'nullable',
+        ]);
+
+        $staff->workingHours()->create([
+            'schedule_type' => 'blocked',
+            'day_of_week' => null,
+            'specific_date' => $request->specific_date,
+            'start_date' => null,
+            'end_date' => null,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'is_available' => false,
+        ]);
+
+        return redirect()->route('appointments.calendar')
+            ->with('success', 'Time blocked successfully.');
+    }
+
+    public function moveBlockedTime(Request $request, \App\Models\StaffWorkingHour $workingHour)
+    {
+        $request->validate([
+            'staff_id' => 'required|exists:staff,id',
+            'specific_date' => 'required|date',
+            'start_time' => 'required',
+            'end_time' => 'required|after:start_time',
+        ]);
+
+        $workingHour->update([
+            'staff_id' => $request->staff_id,
+            'specific_date' => $request->specific_date,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteBlockedTime(\App\Models\StaffWorkingHour $workingHour)
+    {
+        $workingHour->delete();
+
+        return response()->json(['success' => true]);
+    }
 }
