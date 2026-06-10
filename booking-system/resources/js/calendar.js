@@ -67,16 +67,102 @@ document.addEventListener('DOMContentLoaded', function () {
         },
 
         eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            info.jsEvent.stopPropagation();
             if (info.event.extendedProps.type === 'blocked_time') {
                 openBlockedTimeModal(info.event);
                 return;
             }
 
-            //alert('Appointment ID: ' + info.event.id);
+            openAppointmentContextMenu(info);
         },
     });
 
     calendar.render();
+
+    let selectedAppointmentEvent = null;
+
+    function openAppointmentContextMenu(info) {
+        selectedAppointmentEvent = info.event;
+
+        let menu = document.getElementById('appointment-context-menu');
+
+        if (!menu) {
+            menu = document.createElement('div');
+            menu.id = 'appointment-context-menu';
+            menu.style.position = 'fixed';
+            menu.style.background = '#ffffff';
+            menu.style.border = '1px solid #ddd';
+            menu.style.borderRadius = '8px';
+            menu.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+            menu.style.zIndex = '9999';
+            menu.style.minWidth = '190px';
+            menu.style.overflow = 'hidden';
+
+            menu.innerHTML = `
+                <button type="button" id="appointment-add-soap"
+                        style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
+                    Add SOAP Note
+                </button>
+
+                <button type="button" id="appointment-no-show"
+                        style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
+                    Set No Show
+                </button>
+            `;
+
+            document.body.appendChild(menu);
+
+            document.getElementById('appointment-add-soap').addEventListener('click', function () {
+                if (!selectedAppointmentEvent) return;
+
+                const appointmentDate = selectedAppointmentEvent.startStr.substring(0, 10);
+
+                const returnUrl = `/calendar?date=${appointmentDate}`;
+
+                window.location.href =
+                    `/appointments/${selectedAppointmentEvent.id}/soap-notes?return_url=` +
+                    encodeURIComponent(returnUrl);
+            });
+
+            document.getElementById('appointment-no-show').addEventListener('click', function () {
+                if (!selectedAppointmentEvent) return;
+
+                setAppointmentNoShow(selectedAppointmentEvent);
+            });
+        }
+
+        menu.style.left = info.jsEvent.clientX + 'px';
+        menu.style.top = info.jsEvent.clientY + 'px';
+        menu.style.display = 'block';
+    }
+
+    function setAppointmentNoShow(event) {
+        fetch(`/appointments/${event.id}/no-show`, {
+            method: 'PATCH',
+            headers: {
+                'X-CSRF-TOKEN': window.calendarData.csrf
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                event.setProp('backgroundColor', '#dc2626');
+                event.setProp('borderColor', '#b91c1c');
+                event.setExtendedProp('status', 'no_show');
+
+                const menu = document.getElementById('appointment-context-menu');
+                if (menu) {
+                    menu.style.display = 'none';
+                }
+            } else {
+                alert('Could not set no show.');
+            }
+        })
+        .catch(() => {
+            alert('Could not set no show.');
+        });
+    }
 
     function openBlockedTimeModal(event) {
         let modal = document.getElementById('blocked-time-modal');
@@ -221,6 +307,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (menu && !menu.contains(event.target)) {
             menu.style.display = 'none';
+        }
+
+        const appointmentMenu = document.getElementById('appointment-context-menu');
+
+        if (appointmentMenu && !appointmentMenu.contains(event.target)) {
+            appointmentMenu.style.display = 'none';
         }
     });
 

@@ -12,13 +12,30 @@ use Illuminate\Http\Request;
 
 class AppointmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $appointments = Appointment::with([
-                'customer',
-                'service',
-                'staff',
-            ])
+        $query = Appointment::with([
+            'customer',
+            'service',
+            'staff',
+        ]);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('customer', function ($customerQuery) use ($search) {
+                    $customerQuery->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                })
+                ->orWhereHas('staff', function ($staffQuery) use ($search) {
+                    $staffQuery->where('name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $appointments = $query
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->get();
@@ -146,7 +163,7 @@ class AppointmentController extends Controller
         $bookedAppointments = Appointment::with('service')
             ->where('staff_id', $request->staff_id)
             ->where('appointment_date', $request->date)
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', ['pending', 'confirmed', 'no_show'])
             ->get();
 
         $availableTimes = [];
@@ -317,7 +334,7 @@ class AppointmentController extends Controller
 
         $appointments = Appointment::with(['customer', 'service', 'staff'])
             ->where('appointment_date', $date)
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', ['pending', 'confirmed', 'no_show'])
             ->whereIn('staff_id', $staffMembers->pluck('id'))
             ->get();
 
@@ -333,14 +350,32 @@ class AppointmentController extends Controller
                 ->addMinutes($appointment->duration)
                 ->format('Y-m-d\TH:i:s');
 
+            $isNoShow = $appointment->status === 'no_show';
+
+            $serviceColor = $appointment->service->color ?? '#3b82f6';
+
             return [
                 'id' => (string) $appointment->id,
                 'resourceId' => (string) $appointment->staff_id,
-                'title' => ($appointment->customer->full_name ?? 'Customer') . ' - ' . ($appointment->service->name ?? 'Service'),
+
+                'title' => ($appointment->customer->full_name ?? 'Customer')
+                    . ' - ' .
+                    ($appointment->service->name ?? 'Service'),
+
                 'start' => $start,
                 'end' => $end,
+
+                'backgroundColor' => $isNoShow ? '#dc2626' : $serviceColor,
+                'borderColor' => $isNoShow ? '#b91c1c' : $serviceColor,
+                'textColor' => '#ffffff',
+
+                'extendedProps' => [
+                    'type' => 'appointment',
+                    'status' => $appointment->status,
+                    'appointment_id' => $appointment->id,
+                ],
             ];
-        })->values();
+        });        
 
         $businessStart = \Carbon\Carbon::parse($date . ' 08:00');
         $businessEnd = \Carbon\Carbon::parse($date . ' 22:00');
@@ -428,6 +463,17 @@ class AppointmentController extends Controller
         return response()->json([
             'resources' => $resources,
             'events' => $events,
+        ]);
+    }
+
+    public function setNoShow(Appointment $appointment)
+    {
+        $appointment->update([
+            'status' => 'no_show',
+        ]);
+
+        return response()->json([
+            'success' => true,
         ]);
     }
 }

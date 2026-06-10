@@ -50,6 +50,15 @@
            style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px;">
 </div>
 
+<div style="margin-bottom:16px;">
+    <label style="display:block; margin-bottom:6px;">Service Color</label>
+
+    <input type="color"
+           name="color"
+           value="{{ old('color', $service->color ?? '#3b82f6') }}"
+           style="width:80px; height:40px;">
+</div>
+
 <div class="mb-4">
     <label class="flex items-center">
         <input type="checkbox" name="is_active" value="1" class="mr-2"

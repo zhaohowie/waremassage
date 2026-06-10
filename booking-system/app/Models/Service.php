@@ -13,6 +13,7 @@ class Service extends Model
         'price',
         'duration',
         'cleanup_time',
+        'color',
         'is_active',
     ];
 

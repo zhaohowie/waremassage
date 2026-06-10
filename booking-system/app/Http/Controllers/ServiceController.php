@@ -31,6 +31,7 @@ class ServiceController extends Controller
             'duration' => 'required|integer|min:1',
             'cleanup_time' => 'required|integer|min:0',
             'description' => 'nullable',
+            'color' => 'required',
         ]);
 
         Service::create([
@@ -40,6 +41,7 @@ class ServiceController extends Controller
             'price' => $request->price,
             'duration' => $request->duration,
             'cleanup_time' => $request->cleanup_time,
+            'color' => $request->color,
             'is_active' => $request->has('is_active'),
         ]);
 
@@ -62,6 +64,7 @@ class ServiceController extends Controller
             'duration' => 'required|integer|min:1',
             'cleanup_time' => 'required|integer|min:0',
             'description' => 'nullable',
+            'color' => 'required',
         ]);
 
         $service->update([
@@ -71,6 +74,7 @@ class ServiceController extends Controller
             'price' => $request->price,
             'duration' => $request->duration,
             'cleanup_time' => $request->cleanup_time,
+            'color' => $request->color,
             'is_active' => $request->has('is_active'),
         ]);
 

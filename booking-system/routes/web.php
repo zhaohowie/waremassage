@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\SoapNoteController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
@@ -50,7 +51,25 @@ Route::middleware(['auth'])->group(function () {
         ->name('blocked-times.move');
 
     Route::delete('/blocked-times/{workingHour}', [StaffWorkingHourController::class, 'deleteBlockedTime'])
-        ->name('blocked-times.delete');            
+        ->name('blocked-times.delete');    
+        
+    Route::get('/appointments/{appointment}/soap-notes', [SoapNoteController::class, 'index'])
+        ->name('appointments.soap-notes.index');
+
+    Route::get('/appointments/{appointment}/soap-notes/create', [SoapNoteController::class, 'create'])
+        ->name('appointments.soap-notes.create');
+
+    Route::post('/appointments/{appointment}/soap-notes', [SoapNoteController::class, 'store'])
+        ->name('appointments.soap-notes.store');
+
+    Route::get('/soap-notes/{soapNote}/edit', [SoapNoteController::class, 'edit'])
+        ->name('soap-notes.edit');
+
+    Route::put('/soap-notes/{soapNote}', [SoapNoteController::class, 'update'])
+        ->name('soap-notes.update');   
+        
+    Route::patch('/appointments/{appointment}/no-show', [AppointmentController::class, 'setNoShow'])
+        ->name('appointments.no-show');
 });
 
 Route::middleware('auth')->group(function () {
