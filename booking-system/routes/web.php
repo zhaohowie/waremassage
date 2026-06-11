@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\AppointmentActivityController;
 use App\Http\Controllers\SoapNoteController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ServiceController;
@@ -70,6 +71,18 @@ Route::middleware(['auth'])->group(function () {
         
     Route::patch('/appointments/{appointment}/no-show', [AppointmentController::class, 'setNoShow'])
         ->name('appointments.no-show');
+
+    Route::get('/appointments/{appointment}/activities', [AppointmentActivityController::class, 'index'])
+        ->name('appointments.activities.index');
+
+    Route::get('/appointments/{appointment}/edit', [AppointmentController::class, 'edit'])
+        ->name('appointments.edit');
+
+    Route::put('/appointments/{appointment}', [AppointmentController::class, 'update'])
+        ->name('appointments.update');  
+        
+    Route::patch('/appointments/{appointment}/undo-no-show', [AppointmentController::class, 'undoNoShow'])
+        ->name('appointments.undo-no-show');        
 });
 
 Route::middleware('auth')->group(function () {

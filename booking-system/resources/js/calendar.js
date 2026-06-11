@@ -85,6 +85,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function openAppointmentContextMenu(info) {
         selectedAppointmentEvent = info.event;
 
+        const noShowButton = document.getElementById('appointment-no-show');
+
+        if (noShowButton) {
+            if (selectedAppointmentEvent.extendedProps.status === 'no_show') {
+                noShowButton.innerText = 'Undo No Show';
+            } else {
+                noShowButton.innerText = 'Set No Show';
+            }
+        }
+
         let menu = document.getElementById('appointment-context-menu');
 
         if (!menu) {
@@ -100,7 +110,17 @@ document.addEventListener('DOMContentLoaded', function () {
             menu.style.overflow = 'hidden';
 
             menu.innerHTML = `
-                <button type="button" id="appointment-add-soap"
+                <button type="button" id="appointment-edit"
+                        style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
+                    Edit Appointment
+                </button>
+
+                <button type="button" id="appointment-view-activities"
+                        style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
+                    View Appointment Activities
+                </button>    
+
+                 <button type="button" id="appointment-add-soap"
                         style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
                     Add SOAP Note
                 </button>
@@ -109,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
                     Set No Show
                 </button>
-            `;
+                `;
 
             document.body.appendChild(menu);
 
@@ -128,8 +148,33 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('appointment-no-show').addEventListener('click', function () {
                 if (!selectedAppointmentEvent) return;
 
-                setAppointmentNoShow(selectedAppointmentEvent);
+                if (selectedAppointmentEvent.extendedProps.status === 'no_show') {
+                    undoAppointmentNoShow(selectedAppointmentEvent);
+                } else {
+                    setAppointmentNoShow(selectedAppointmentEvent);
+                }
             });
+
+            document.getElementById('appointment-view-activities').addEventListener('click', function () {
+                if (!selectedAppointmentEvent) return;
+
+                const appointmentDate = selectedAppointmentEvent.startStr.substring(0, 10);
+                const returnUrl = `/calendar?date=${appointmentDate}`;
+
+                window.location.href =
+                    `/appointments/${selectedAppointmentEvent.id}/activities?return_url=` +
+                    encodeURIComponent(returnUrl);
+            });  
+                        
+            document.getElementById('appointment-edit').addEventListener('click', function () {
+                if (!selectedAppointmentEvent) return;
+
+                const returnUrl = `/calendar?date=${selectedAppointmentEvent.startStr.substring(0, 10)}`;
+
+                window.location.href =
+                    `/appointments/${selectedAppointmentEvent.id}/edit?return_url=` +
+                    encodeURIComponent(returnUrl);
+            });            
         }
 
         menu.style.left = info.jsEvent.clientX + 'px';
@@ -161,6 +206,34 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => {
             alert('Could not set no show.');
+        });
+    }
+
+    function undoAppointmentNoShow(event) {
+        fetch(`/appointments/${event.id}/undo-no-show`, {
+            method: 'PATCH',
+            headers: {
+                'X-CSRF-TOKEN': window.calendarData.csrf
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                event.setExtendedProp('status', 'confirmed');
+
+                if (event.extendedProps.service_color) {
+                    event.setProp('backgroundColor', event.extendedProps.service_color);
+                    event.setProp('borderColor', event.extendedProps.service_color);
+                }
+
+                const menu = document.getElementById('appointment-context-menu');
+                if (menu) menu.style.display = 'none';
+            } else {
+                alert('Could not undo no show.');
+            }
+        })
+        .catch(() => {
+            alert('Could not undo no show.');
         });
     }
 
@@ -265,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function () {
             menu.innerHTML = `
                 <button type="button" id="ctx-book-appointment"
                         style="display:block; width:100%; padding:10px 12px; border:none; background:white; text-align:left; cursor:pointer;">
-                    + Book Appointment
+                    Book Appointment
                 </button>
 
                 <button type="button" id="ctx-block-time"
@@ -293,7 +366,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const time = selectedCalendarSlot.dateStr.substring(11, 16);
                 const staffId = selectedCalendarSlot.staffId;
 
-                window.location.href = `/staff/${staffId}/block-time?date=${date}&start_time=${time}`;
+                const currentCalendarDate = calendar.getDate().toISOString().substring(0, 10);
+
+                window.location.href =
+                    `/staff/${staffId}/block-time?date=${date}` +
+                    `&start_time=${time}` +
+                    `&return_url=` +
+                    encodeURIComponent(`/calendar?date=${currentCalendarDate}`);
             });
         }
 

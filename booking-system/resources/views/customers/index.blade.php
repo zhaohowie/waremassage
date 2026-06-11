@@ -20,6 +20,25 @@
         @endif
 
         <div style="background:white; border-radius:8px; padding:24px;">
+            <form method="GET" action="{{ route('customers.index') }}"
+                style="display:flex; gap:10px; margin-bottom:20px;">
+
+                <input type="text"
+                    name="search"
+                    value="{{ request('search') }}"
+                    placeholder="Search first name, last name, or phone..."
+                    style="flex:1; border:1px solid #d1d5db; border-radius:6px; padding:8px;">
+
+                <button type="submit"
+                        style="background:#2563eb; color:white; padding:8px 16px; border-radius:6px;">
+                    Search
+                </button>
+
+                <a href="{{ route('customers.index') }}"
+                style="background:#6b7280; color:white; padding:8px 16px; border-radius:6px; text-decoration:none;">
+                    Clear
+                </a>
+            </form>             
             <table style="width:100%; border-collapse:collapse;">
                 <thead>
                     <tr style="border-bottom:1px solid #ddd;">

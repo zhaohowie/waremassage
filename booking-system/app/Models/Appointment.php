@@ -37,4 +37,9 @@ class Appointment extends Model
     {
         return $this->hasMany(SoapNote::class);
     }
+
+    public function activities()
+    {
+        return $this->hasMany(AppointmentActivity::class);
+    }
 }

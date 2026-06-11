@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\AppointmentActivity;
 use App\Mail\AppointmentConfirmed;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Appointment;
@@ -129,6 +130,25 @@ class AppointmentController extends Controller
 
             'notes' => $request->notes,
             'status' => 'confirmed',
+        ]);
+
+        AppointmentActivity::create([
+            'appointment_id' => $appointment->id,
+            'user_id' => auth()->id(),
+            'action' => 'created',
+            'description' => 'Appointment was booked.',
+            'old_values' => null,
+            'new_values' => $appointment->only([
+                'customer_id',
+                'service_id',
+                'staff_id',
+                'appointment_date',
+                'appointment_time',
+                'duration',
+                'price',
+                'status',
+                'notes',
+            ]),
         ]);
 
         if ($customer->email) {
@@ -373,6 +393,7 @@ class AppointmentController extends Controller
                     'type' => 'appointment',
                     'status' => $appointment->status,
                     'appointment_id' => $appointment->id,
+                    'service_color' => $serviceColor,
                 ],
             ];
         });        
@@ -476,4 +497,92 @@ class AppointmentController extends Controller
             'success' => true,
         ]);
     }
+
+    public function edit(Appointment $appointment)
+    {
+        $appointment->load(['customer', 'service', 'staff']);
+
+        $services = Service::where('is_active', true)->orderBy('name')->get();
+        $staff = Staff::where('is_active', true)->orderBy('name')->get();
+        $customers = Customer::orderBy('first_name')->orderBy('last_name')->get();
+
+        return view('appointments.edit', compact(
+            'appointment',
+            'services',
+            'staff',
+            'customers'
+        ));
+    }
+
+    public function update(Request $request, Appointment $appointment)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'service_id' => 'required|exists:services,id',
+            'staff_id' => 'required|exists:staff,id',
+            'appointment_date' => 'required|date',
+            'appointment_time' => 'required',
+            'status' => 'required|in:pending,confirmed,completed,cancelled,no_show',
+            'notes' => 'nullable',
+        ]);
+
+        $oldValues = $appointment->only([
+            'customer_id',
+            'service_id',
+            'staff_id',
+            'appointment_date',
+            'appointment_time',
+            'duration',
+            'price',
+            'status',
+            'notes',
+        ]);
+
+        $service = Service::findOrFail($request->service_id);
+
+        $appointment->update([
+            'customer_id' => $request->customer_id,
+            'service_id' => $request->service_id,
+            'staff_id' => $request->staff_id,
+            'appointment_date' => $request->appointment_date,
+            'appointment_time' => $request->appointment_time,
+            'duration' => $service->duration,
+            'price' => $service->price,
+            'status' => $request->status,
+            'notes' => $request->notes,
+        ]);
+
+        AppointmentActivity::create([
+            'appointment_id' => $appointment->id,
+            'user_id' => auth()->id(),
+            'action' => 'updated',
+            'description' => 'Appointment was updated.',
+            'old_values' => $oldValues,
+            'new_values' => $appointment->only([
+                'customer_id',
+                'service_id',
+                'staff_id',
+                'appointment_date',
+                'appointment_time',
+                'duration',
+                'price',
+                'status',
+                'notes',
+            ]),
+        ]);
+
+        return redirect(request('return_url') ?: route('appointments.index'))
+            ->with('success', 'Appointment updated successfully.');
+    } 
+    
+    public function undoNoShow(Appointment $appointment)
+    {
+        $appointment->update([
+            'status' => 'confirmed',
+        ]);
+
+        return response()->json([
+            'success' => true,
+        ]);
+    }    
 }

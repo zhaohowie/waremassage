@@ -42,10 +42,33 @@
                               style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px;"></textarea>
                 </div>
 
-                <button type="submit"
-                        style="background:#dc2626; color:white; padding:10px 18px; border-radius:6px;">
-                    Block Time
-                </button>
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    @php
+                        $returnUrl = request('return_url');
+                    @endphp
+                    <button type="submit"
+                            style="
+                                background:#dc2626;
+                                color:white;
+                                padding:10px 18px;
+                                border:none;
+                                border-radius:6px;
+                                cursor:pointer;
+                            ">
+                        Block Time
+                    </button>
+
+                    <a href="{{ $returnUrl ?: url()->previous() }}"
+                    style="
+                            background:#6b7280;
+                            color:white;
+                            padding:10px 18px;
+                            border-radius:6px;
+                            text-decoration:none;
+                    ">
+                        Cancel
+                    </a>
+                </div>
             </form>
         </div>
     </div>

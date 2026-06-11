@@ -18,10 +18,24 @@
 
                 @include('soap-notes.form')
 
-                <button type="submit"
-                        style="background:#2563eb; color:white; padding:10px 18px; border-radius:6px;">
-                    Save SOAP Note
-                </button>
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    <button type="submit"
+                            style="background:#2563eb; color:white; padding:10px 18px; border-radius:6px;">
+                        Save
+                    </button>
+
+                    <a href="{{ route('appointments.soap-notes.index', $appointment) }}"
+                    style="
+                            background:#6b7280;
+                            color:white;
+                            padding:10px 18px;
+                            border-radius:6px;
+                            text-decoration:none;
+                            display:inline-block;
+                    ">
+                        Cancel
+                    </a>
+                </div>
             </form>
         </div>
     </div>
