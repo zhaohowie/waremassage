@@ -10,9 +10,17 @@ class ServiceController extends Controller
 {
     public function index()
     {
-        $services = Service::with('category')->latest()->get();
+        $categories = \App\Models\ServiceCategory::with(['services' => function ($query) {
+                $query->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get();
 
-        return view('services.index', compact('services'));
+        $uncategorizedServices = \App\Models\Service::whereNull('service_category_id')
+            ->orderBy('name')
+            ->get();
+
+        return view('services.index', compact('categories', 'uncategorizedServices'));
     }
 
     public function create()

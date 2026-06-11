@@ -347,8 +347,18 @@ class AppointmentController extends Controller
             ->unique()
             ->values();
 
+        $appointmentStaffIds = Appointment::where('appointment_date', $date)
+            ->whereIn('status', ['pending', 'confirmed', 'no_show'])
+            ->pluck('staff_id')
+            ->unique();
+
+        $staffIds = $availableStaffIds
+            ->merge($appointmentStaffIds)
+            ->unique()
+            ->values();
+
         $staffMembers = Staff::where('is_active', true)
-            ->whereIn('id', $availableStaffIds)
+            ->whereIn('id', $staffIds)
             ->orderBy('name')
             ->get();
 
@@ -526,17 +536,16 @@ class AppointmentController extends Controller
             'notes' => 'nullable',
         ]);
 
-        $oldValues = $appointment->only([
-            'customer_id',
-            'service_id',
-            'staff_id',
-            'appointment_date',
-            'appointment_time',
-            'duration',
-            'price',
-            'status',
-            'notes',
-        ]);
+        $appointment->load([ 'staff', 'service', 'customer', ]);
+
+        $oldValues = [
+            'customer' => $appointment->customer->full_name ?? null,
+            'staff' => $appointment->staff->name ?? null,
+            'service' => $appointment->service->name ?? null,
+            'date' => $appointment->appointment_date,
+            'time' => substr($appointment->appointment_time, 0, 5),
+            'status' => $appointment->status,
+        ];
 
         $service = Service::findOrFail($request->service_id);
 
@@ -552,27 +561,37 @@ class AppointmentController extends Controller
             'notes' => $request->notes,
         ]);
 
-        AppointmentActivity::create([
-            'appointment_id' => $appointment->id,
-            'user_id' => auth()->id(),
-            'action' => 'updated',
-            'description' => 'Appointment was updated.',
-            'old_values' => $oldValues,
-            'new_values' => $appointment->only([
-                'customer_id',
-                'service_id',
-                'staff_id',
-                'appointment_date',
-                'appointment_time',
-                'duration',
-                'price',
-                'status',
-                'notes',
-            ]),
-        ]);
+        $appointment->refresh()->load([ 'staff', 'service', 'customer', ]); 
+        $newValues = [ 
+            'customer' => $appointment->customer->full_name ?? null, 
+            'staff' => $appointment->staff->name ?? null, 
+            'service' => $appointment->service->name ?? null, 
+            'date' => $appointment->appointment_date, 
+            'time' => substr($appointment->appointment_time, 0, 5), 
+            'status' => $appointment->status, 
+            ];      
 
-        return redirect(request('return_url') ?: route('appointments.index'))
-            ->with('success', 'Appointment updated successfully.');
+        $changes = []; 
+
+        foreach ($oldValues as $field => $oldValue) { 
+            $newValue = $newValues[$field] ?? null; 
+            if ($oldValue != $newValue) { 
+                $changes[] = ucfirst($field) . ': ' . ($oldValue ?: '-') . ' → ' . ($newValue ?: '-'); 
+            }
+        }            
+
+        if (!empty($changes)) { 
+            AppointmentActivity::create([ 
+                'appointment_id' => $appointment->id, 
+                'user_id' => auth()->id(), 
+                'action' => 'updated', 
+                'description' => 'Appointment updated. ' . implode('; ', $changes), 
+                'old_values' => $oldValues, 
+                'new_values' => $newValues, 
+                ]); 
+            } 
+            
+        return redirect( $request->return_url ?: route('appointments.index') )->with( 'success', 'Appointment updated successfully.' );
     } 
     
     public function undoNoShow(Appointment $appointment)
