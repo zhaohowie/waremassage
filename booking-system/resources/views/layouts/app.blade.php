@@ -49,11 +49,11 @@
                     <a href="{{ route('services.index') }}" style="display:block; color:white; padding:10px; text-decoration:none;">
                         Services
                     </a>
-
+<!--
                     <a href="{{ route('service-categories.index') }}" style="display:block; color:white; padding:10px; text-decoration:none;">
                         Service Categories
                     </a>
-
+-->
                     <a href="{{ route('booking.form') }}" target="_blank" style="display:block; color:white; padding:10px; text-decoration:none;">
                         Public Booking Page
                     </a>

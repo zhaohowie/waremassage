@@ -8,19 +8,22 @@ use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = \App\Models\ServiceCategory::with(['services' => function ($query) {
-                $query->orderBy('name');
-            }])
+        $categories = ServiceCategory::with(['services' => function ($query) {
+            $query->orderBy('name');
+        }])
+        ->orderBy('name')
+        ->get();
+
+        $uncategorizedServices = Service::whereNull('service_category_id')
             ->orderBy('name')
             ->get();
 
-        $uncategorizedServices = \App\Models\Service::whereNull('service_category_id')
-            ->orderBy('name')
-            ->get();
-
-        return view('services.index', compact('categories', 'uncategorizedServices'));
+        return view('services.index', compact(
+            'categories',
+            'uncategorizedServices'
+        ));
     }
 
     public function create()

@@ -11,11 +11,22 @@
                 @csrf
 
                 @include('service-categories.form')
-
+                <input type="hidden" name="return_url" value="{{ request('return_url') }}">
                 <button type="submit"
                         style="background:#2563eb; color:white; padding:8px 16px; border-radius:6px;">
                     Save Category
                 </button>
+
+                <a href="{{ request('return_url') ?: url()->previous() }}"
+                style="
+                        background:#6b7280;
+                        color:white;
+                        padding:10px 18px;
+                        border-radius:6px;
+                        text-decoration:none;
+                ">
+                    Cancel
+                </a>                
             </form>
         </div>
     </div>

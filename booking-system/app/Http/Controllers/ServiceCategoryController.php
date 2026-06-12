@@ -30,7 +30,7 @@ class ServiceCategoryController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('service-categories.index')->with('success', 'Category created successfully.');
+        return redirect($request->return_url ?: route('services.index'))->with('success', 'Category created successfully.');
     }
 
     public function edit(ServiceCategory $serviceCategory)
